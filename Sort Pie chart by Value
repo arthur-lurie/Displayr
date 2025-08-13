@@ -1,0 +1,76 @@
+includeWeb('Table JavaScript Utility Functions');
+
+let row_labels = table.rowLabels;
+if (row_labels.length < 2)
+    form.ruleNotApplicable('table has only one row');
+if (table.rowSpans.length > 0)
+    form.ruleNotApplicable('table has row spans');
+
+// Set up controls for user input.
+const rule_name = 'Make One Row Appear After Others';
+form.setHeading(rule_name);
+let description = form.newLabel('Choose a row to move and up to 5 other rows it should appear after.');
+description.lineBreakAfter = true;
+
+// First combo box for the row to move
+let label_move = form.newLabel('Move row:');
+let combo_box_move = form.newComboBox('move', row_labels);
+label_move.lineBreakAfter = true;
+
+// Create reduced labels (excluding the row we'll move)
+let row_labels_reduced = row_labels.slice(); // copy array
+
+// Create array to store our after combo boxes
+let after_combos = [];
+
+// Add up to 5 "after" row selectors
+let after_controls = [];
+for (let i = 0; i < 5; i++) {
+    if (i === 0) {
+        let label = form.newLabel('After row:');
+        after_controls.push(label);
+    } else {
+        let label = form.newLabel('Then after:');
+        after_controls.push(label);
+    }
+    
+    let combo = form.newComboBox('after' + (i+1), row_labels_reduced);
+    combo.lineBreakAfter = i < 4;
+    after_combos.push(combo);
+    after_controls.push(combo);
+}
+
+// Update form with all controls
+form.setInputControls([description, label_move, combo_box_move, ...after_controls]);
+
+// Get the row to move
+let move_row_label = combo_box_move.requireValue();
+let move_index = table.rowIndex(move_row_label);
+
+// Get all selected "after" rows
+let after_indices = [];
+for (let i = 0; i < after_combos.length; i++) {
+    if (after_combos[i].value !== null) {
+        let label = after_combos[i].requireValue();
+        after_indices.push(table.rowIndex(label));
+    }
+}
+
+// Create summary text
+let summary = 'Make row "' + move_row_label + '" appear after ';
+if (after_indices.length === 1) {
+    summary += 'row "' + row_labels[after_indices[0]] + '"';
+} else if (after_indices.length > 1) {
+    summary += 'rows: ';
+    summary += after_indices.map(i => '"' + row_labels[i] + '"').join(', ');
+} else {
+    form.ruleNotApplicable('no target rows selected');
+}
+form.setSummary(summary);
+
+// Move the rows in reverse order to maintain proper positioning
+for (let i = after_indices.length - 1; i >= 0; i--) {
+    moveRowAfterComplete(move_index, after_indices[i]);
+    // Update the move index since the row has been moved
+    move_index = after_indices[i] + 1;
+}
