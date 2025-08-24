@@ -1,4 +1,8 @@
 includeWeb('Table JavaScript Utility Functions');
+let number_of_wedges = 6;  // CHANGE HERE // Enter the number of values
+
+let max_after_rows = number_of_wedges - 1; 
+let break_condition = max_after_rows - 1; 
 
 let row_labels = table.rowLabels;
 if (row_labels.length < 2)
@@ -9,7 +13,7 @@ if (table.rowSpans.length > 0)
 // Set up controls for user input.
 const rule_name = 'Make One Row Appear After Others';
 form.setHeading(rule_name);
-let description = form.newLabel('Choose a row to move and up to 5 other rows it should appear after.');
+let description = form.newLabel('Choose a row to move and up to ' + max_after_rows + ' other rows it should appear after.');
 description.lineBreakAfter = true;
 
 // First combo box for the row to move
@@ -23,9 +27,9 @@ let row_labels_reduced = row_labels.slice(); // copy array
 // Create array to store our after combo boxes
 let after_combos = [];
 
-// Add up to 5 "after" row selectors
+// Add up to max_after_rows "after" row selectors
 let after_controls = [];
-for (let i = 0; i < 5; i++) {
+for (let i = 0; i < max_after_rows; i++) {
     if (i === 0) {
         let label = form.newLabel('After row:');
         after_controls.push(label);
@@ -35,7 +39,7 @@ for (let i = 0; i < 5; i++) {
     }
     
     let combo = form.newComboBox('after' + (i+1), row_labels_reduced);
-    combo.lineBreakAfter = i < 4;
+    combo.lineBreakAfter = i < break_condition;
     after_combos.push(combo);
     after_controls.push(combo);
 }
