@@ -1,0 +1,148 @@
+includeWeb('Table JavaScript Utility Functions');
+
+excludeRTables();
+
+form.setHeading("Table Enhancement Utilities");
+form.setSummary("Add sample size to column labels, add column letters, and hide NET columns");
+
+// Check basic table requirements
+if (table.numberColumns === 0)
+    form.ruleNotApplicable('the table has no columns');
+
+if (table.numberColumns == 1)
+    form.ruleNotApplicable('the table only has a single column');
+
+// Sample Size Controls
+let sample_size_section = form.newLabel('<b>Sample Size Options:</b>');
+sample_size_section.lineBreakAfter = true;
+
+let enable_sample_size = form.newCheckBox('enable_ss', 'Add sample size to column labels');
+enable_sample_size.setDefault(true);
+enable_sample_size.lineBreakAfter = true;
+
+// Check if sample size is available
+let sample_size_available = false;
+let stat_name = table.getTranslation("Column n");
+if (belowTableExists() && below_table.availableStatistics.indexOf('Column n') != -1) {
+    sample_size_available = true;
+} else {
+    let no_sample_warning = form.newLabel('Note: Sample sizes (' + stat_name + ') are not available for this table');
+    no_sample_warning.lineBreakAfter = true;
+    enable_sample_size.setDefault(false);
+    enable_sample_size.setEnabled(false);
+}
+
+// Sample size text control
+let override_text_label = form.newLabel("Text to show in header:");
+let override_text = form.newTextBox("ol");
+override_text.setDefault("N=");
+override_text.lineBreakAfter = true;
+
+// Weighted sample size option
+let pop_box = form.newCheckBox('pop', "Show weighted sample size (Population)");
+pop_box.setDefault(false);
+pop_box.lineBreakAfter = true;
+
+// Column Letters Section
+let column_letters_section = form.newLabel('<b>Column Letters Options:</b>');
+column_letters_section.lineBreakAfter = true;
+
+let enable_column_letters = form.newCheckBox('enable_letters', 'Add column letters to column labels');
+enable_column_letters.setDefault(false);
+enable_column_letters.lineBreakAfter = true;
+
+// Check if column names are available
+let column_names_available = false;
+if (table.availableStatistics.indexOf('Column Names') != -1) {
+    column_names_available = true;
+} else {
+    let no_columns_warning = form.newLabel('Note: Column Names are not available for this table');
+    no_columns_warning.lineBreakAfter = true;
+    enable_column_letters.setDefault(false);
+    enable_column_letters.setEnabled(false);
+}
+
+// NET Column Section
+let net_section = form.newLabel('<b>NET Column Options:</b>');
+net_section.lineBreakAfter = true;
+
+let enable_hide_net = form.newCheckBox('enable_net', 'Hide NET columns');
+enable_hide_net.setDefault(true);
+enable_hide_net.lineBreakAfter = true;
+
+// Build controls array
+let controls = [sample_size_section, enable_sample_size];
+
+if (sample_size_available) {
+    controls = controls.concat([override_text_label, override_text, pop_box]);
+} else {
+    controls.push(no_sample_warning);
+}
+
+controls = controls.concat([column_letters_section, enable_column_letters]);
+
+if (!column_names_available) {
+    controls.push(no_columns_warning);
+}
+
+controls = controls.concat([net_section, enable_hide_net]);
+
+// Get initial values
+let label_text = override_text.getValue();
+if (label_text == null)
+    label_text = "";
+let use_weighted = pop_box.getValue();
+
+// Add decimal controls if using weighted sample size
+let num_decimals = 0;
+if (use_weighted && enable_sample_size.getValue()) {
+    let decimals_label_before = form.newLabel("Round to:");
+    let decimals_label_after = form.newLabel("decimal places");
+    let decimal_control = form.newNumericUpDown('dec');
+    decimal_control.setDefault(0);
+    decimal_control.setIncrement(1);
+    decimal_control.setMaximum(5);
+    controls = controls.concat([decimals_label_before, decimal_control, decimals_label_after]);
+    form.setInputControls(controls);
+    num_decimals = decimal_control.getValue();
+} else {
+    form.setInputControls(controls);
+}
+
+// Process the table based on user selections
+let column_labels = table.columnLabels;
+
+// 1. Add sample sizes if enabled and available
+if (enable_sample_size.getValue() && sample_size_available) {
+    let stat_to_use = use_weighted ? 'Column Population' : 'Column n';
+    let column_ns = below_table.get(stat_to_use);
+    
+    if (use_weighted)
+        column_ns = roundStats(column_ns, num_decimals);
+    
+    if (column_ns.length == 1)
+        column_ns = column_ns[0];
+    
+    for (let column = 0; column < table.numberColumns; column++) {
+        column_labels[column] = column_labels[column] + '\r\n' + label_text + column_ns[column];
+    }
+}
+
+// 2. Add column letters if enabled and available
+if (enable_column_letters.getValue() && column_names_available) {
+    let column_names = table.get('Column Names')[0];
+    let eol = '\r\n';
+    for (let column = 0; column < table.numberColumns; column++) {
+        column_labels[column] = column_labels[column] + eol + column_names[column];
+    }
+}
+
+// Set the adjusted column labels
+table.columnLabels = column_labels;
+
+// 3. Hide NET columns if enabled
+if (enable_hide_net.getValue()) {
+    table.netColumns.forEach(function (net_col, index) {
+        deleteColumnComplete(net_col - index);
+    });
+}
