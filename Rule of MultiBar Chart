@@ -35,7 +35,7 @@ if (belowTableExists() && below_table.availableStatistics.indexOf('Column n') !=
 // Sample size text control
 let override_text_label = form.newLabel("Text to show in header:");
 let override_text = form.newTextBox("ol");
-override_text.setDefault("N=");
+override_text.setDefault("n = ");
 override_text.lineBreakAfter = true;
 
 // Weighted sample size option
